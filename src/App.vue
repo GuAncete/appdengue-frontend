@@ -68,7 +68,7 @@
 import { ref, onMounted } from 'vue';
 import MapComponent from './components/MapComponent.vue';
 import AddOccurrenceModal from './components/AddOccurrenceModal.vue';
-// import apiClient from './services/api'; // Vamos usar isso em breve!
+import apiClient from './services/apiClient.js';
 
 // --- ESTADO DA APLICAÇÃO ---
 const isMenuOpen = ref(false);
@@ -76,9 +76,36 @@ const listaDeOcorrencias = ref([]); // A lista agora começa vazia
 const isAddingMode = ref(false);
 const newOccurrenceLocation = ref(null);
 
+
+async function fetchOcorrencias() {
+  try {
+    console.log("Iniciando busca de ocorrências no back-end...");
+
+    const response = await apiClient.get('/denuncias');
+
+    const ocorrenciasMapeadas = response.data.denuncias.map(item => { 
+      return {
+        id: item.IdDenuncia,
+        lat: parseFloat(item.Latitude),
+        lng: parseFloat(item.Longitude),
+        status: item.Status === 1 ? 'pendente' : (item.Status === 3 ? 'resolvido' : 'em_analise'),
+        descricao: item.Descricao
+      };
+    });
+
+    listaDeOcorrencias.value = ocorrenciasMapeadas;
+    console.log("Ocorrências carregadas e mapeadas com sucesso!", listaDeOcorrencias.value);
+
+  } catch (error) {
+    console.error("Erro ao buscar ocorrências:", error); // O erro detalhado também aparecerá aqui
+    alert("Não foi possível carregar os dados do mapa. Verifique o console para mais detalhes.");
+  }
+}
+
+
 // --- LÓGICA DE DADOS ---
 onMounted(() => {
-  console.log("Aplicação iniciada. O mapa está pronto para receber dados.");
+  fetchOcorrencias(); // Busca os dados iniciais ao carregar o app
 });
 
 // --- MÉTODOS DE INTERAÇÃO ---
@@ -103,19 +130,44 @@ function handleMapClick(coords) {
   }
 }
 
-function saveOccurrence(formData) {
-  console.log("Salvando ocorrência:", { ...formData, ...newOccurrenceLocation.value });
-  
-  listaDeOcorrencias.value = listaDeOcorrencias.value.filter(o => o.id !== 'temp');
-  
-  listaDeOcorrencias.value.push({
-    id: Date.now(),
-    ...newOccurrenceLocation.value,
-    status: 'pendente',
-    descricao: formData.descricao
-  });
+// VERSÃO NOVA / REAL
+async function saveOccurrence(formData) {
+  // Verificação de segurança: garante que um local foi clicado no mapa
+  if (!newOccurrenceLocation.value) {
+    alert("Erro: A localização no mapa não foi definida.");
+    return;
+  }
 
-  cancelAddMode();
+  // 1. Prepara o "pacote" de dados para envio (payload)
+  // Usamos os nomes exatos que a API do Laravel espera
+  const payload = {
+    IdUsuario: 1, // Provisório: o ideal é vir do usuário logado
+    TipoFoco: 1,  // Provisório: 1 para "Água parada"
+    Descricao: formData.descricao,
+    Latitude: newOccurrenceLocation.value.lat,
+    Longitude: newOccurrenceLocation.value.lng,
+    Status: 1, // 1 para "Pendente"
+  };
+
+  try {
+    console.log("Enviando nova denúncia para o back-end:", payload);
+
+    // 2. Faz a chamada POST para a rota '/denuncias' com os dados
+    await apiClient.post('/denuncias', payload);
+
+    alert("Denúncia registrada com sucesso!");
+    // 3. Limpa o formulário e o marcador temporário
+    cancelAddMode();
+
+    // 4. ATUALIZA O MAPA! Busca a lista de denúncias novamente
+    // para incluir a que acabamos de criar.
+    await fetchOcorrencias();
+
+  } catch (error) {
+    // Exibe detalhes do erro de validação, se houver
+    console.error("Erro ao salvar denúncia:", error.response?.data || error);
+    alert("Houve um erro ao registrar a denúncia.");
+  }
 }
 
 function cancelAddMode() {
