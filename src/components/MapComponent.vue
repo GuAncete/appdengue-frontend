@@ -29,24 +29,21 @@ const props = defineProps({
   ocorrencias: { type: Array, required: true },
   isAddingMode: { type: Boolean, default: false }
 });
-const emit = defineEmits(['map-click']);
+// ATUALIZADO: Adicionado 'marker-click' aos eventos que o componente pode emitir.
+const emit = defineEmits(['map-click', 'marker-click']);
 
 const map = ref(null);
 const markersLayer = ref(null);
 
 onMounted(() => {
-  // Coordenadas aproximadas de Balsamo
   const bounds = L.latLngBounds(
-    [-20.76, -49.60], // sudoeste
-    [-20.72, -49.56]  // nordeste
+  
   );
 
   map.value = L.map('map-container', {
     maxBounds: bounds,
     maxBoundsViscosity: 1.0
   }).setView([-20.738426674460733, -49.579619095461986], 15);
-
-
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -80,7 +77,10 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
     const marker = L.marker([ocorrencia.lat, ocorrencia.lng], { icon: icone }).addTo(markersLayer.value);
 
     if (ocorrencia.id !== 'temp') {
-      marker.bindPopup(`<b>Ocorrência #${ocorrencia.id}</b><br>${ocorrencia.descricao}`);
+      // ATUALIZADO: Em vez de um popup, agora o clique no marcador emite um evento com o ID da ocorrência.
+      marker.on('click', () => {
+        emit('marker-click', ocorrencia.id);
+      });
     }
   });
 }, { deep: true });
@@ -88,10 +88,8 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
 </script>
 
 <style scoped>
-/* CSS ATUALIZADO para forçar o preenchimento do ecrã */
 #map-container {
   position: fixed;
-  /* Fixa o mapa diretamente na janela do navegador */
   top: 0;
   left: 0;
   right: 0;
@@ -99,17 +97,13 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
   height: 100vh;
   width: 100vw;
 }
-
 .add-mode-cursor {
   cursor: crosshair !important;
 }
 </style>
 
 <style>
-/* Estilos Globais para garantir que o layout da página não tenha margens */
-html,
-body,
-#app {
+html, body, #app {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -117,3 +111,4 @@ body,
   overflow: hidden;
 }
 </style>
+
