@@ -2,12 +2,21 @@
   <div v-if="currentPage === 'login'">
     <LoginView 
       @login-success="handleLoginSuccess" 
-      @go-to-register="showPage('register')" 
+      @go-to-register="showPage('register')"
+      @go-to-forgot-password="showPage('forgot-password')"
     />
   </div>
 
   <div v-else-if="currentPage === 'register'">
     <RegisterView @go-to-login="showPage('login')" />
+  </div>
+
+  <div v-else-if="currentPage === 'forgot-password'">
+    <ForgotPasswordView @go-to-login="showPage('login')" />
+  </div>
+
+  <div v-else-if="currentPage === 'reset-password'">
+    <ResetPasswordView @reset-success="showPage('login')" />
   </div>
 
   <div v-else-if="currentPage === 'map'">
@@ -83,18 +92,19 @@ import AddOccurrenceModal from './components/AddOccurrenceModal.vue';
 import apiClient from './services/apiClient.js';
 import UsersView from './views/UsersView.vue';
 import DenunciaDetailModal from './components/DenunciaDetailModal.vue';
-// IMPORTAÇÃO DAS SUAS NOVAS PÁGINAS
 import LoginView from './views/LoginView.vue';
 import RegisterView from './views/RegisterView.vue';
+// NOSSAS NOVAS PÁGINAS
+import ForgotPasswordView from './views/ForgotPasswordView.vue';
+import ResetPasswordView from './views/ResetPasswordView.vue';
 
-const currentPage = ref('login'); // O APP AGORA COMEÇA NA PÁGINA DE LOGIN
-const user = ref(null); // O USUÁRIO COMEÇA COMO NULO, NÃO MAIS SIMULADO
+const currentPage = ref(''); // A PÁGINA INICIAL SERÁ DECIDIDA NO onMounted
+const user = ref(null);
 const isMenuOpen = ref(false);
 const listaDeDenuncias = ref([]);
 const selectedDenuncia = ref(null);
 const isAddModalOpen = ref(false);
 
-// NOVA FUNÇÃO PARA LIDAR COM O LOGIN BEM-SUCEDIDO
 function handleLoginSuccess(data) {
   localStorage.setItem('authToken', data.token);
   localStorage.setItem('authUser', JSON.stringify(data.user));
@@ -105,7 +115,6 @@ function handleLoginSuccess(data) {
   currentPage.value = 'map';
 }
 
-// NOVA FUNÇÃO DE LOGOUT
 function handleLogout() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('authUser');
@@ -114,7 +123,6 @@ function handleLogout() {
   currentPage.value = 'login';
 }
 
-// FUNÇÃO ORIGINAL, AGORA CHAMADA APÓS O LOGIN
 async function fetchDenuncias() {
   try {
     const response = await apiClient.get('/denuncias');
@@ -138,8 +146,14 @@ async function fetchDenuncias() {
   }
 }
 
-// LÓGICA ATUALIZADA PARA MANTER O USUÁRIO LOGADO
 onMounted(() => {
+    // LÓGICA PARA LIDAR COM O LINK DO E-MAIL
+    if (window.location.pathname === '/reset-password') {
+        currentPage.value = 'reset-password';
+        return; // Para a execução aqui
+    }
+
+    // Lógica para manter logado
     const token = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('authUser');
 
