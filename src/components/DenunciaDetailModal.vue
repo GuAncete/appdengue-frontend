@@ -108,6 +108,7 @@ h2 {
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 20px;
+  color: #212529;
 }
 
 .no-photo-placeholder {
@@ -120,6 +121,10 @@ h2 {
   color: #aaa;
   border-radius: 8px;
   margin-bottom: 20px;
+}
+
+.no-photo-placeholder p{
+  color:#212529
 }
 
 .detail-item {
