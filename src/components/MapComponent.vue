@@ -29,7 +29,11 @@ const map = ref(null);
 const markersLayer = ref(null);
 
 onMounted(() => {
-  map.value = L.map('map-container').setView([-20.421, -50.972], 13);
+  // Define uma localização padrão (fallback)
+  const defaultLocation = [-20.421, -50.972];
+  
+  // Inicializa o mapa com a localização padrão
+  map.value = L.map('map-container').setView(defaultLocation, 13);
   
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -37,8 +41,23 @@ onMounted(() => {
   
   markersLayer.value = L.layerGroup().addTo(map.value);
 
-  // A lógica de clique no mapa para adicionar um ponto foi removida.
+  // **** NOVA LÓGICA DE GEOLOCALIZAÇÃO INICIAL ****
+  if (navigator.geolocation) {
+    // Pede a localização atual do dispositivo
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // SUCESSO: Centra o mapa na localização do utilizador
+        const userLocation = [position.coords.latitude, position.coords.longitude];
+        map.value.setView(userLocation, 15); // Usa um zoom mais próximo
+      },
+      (error) => {
+        // ERRO: O utilizador negou ou houve uma falha. O mapa já está na localização padrão.
+        console.warn("Não foi possível obter a localização do utilizador:", error.message);
+      }
+    );
+  }
 
+  // Garante que o mapa se redimensiona corretamente
   setTimeout(() => {
     if (map.value) {
       map.value.invalidateSize();
@@ -51,12 +70,9 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
   markersLayer.value.clearLayers();
 
   newOcorrencias.forEach(ocorrencia => {
-    // A lógica de ícone azul temporário foi removida
     let icone = ocorrencia.status === 'resolvido' ? greenIcon : redIcon;
-
     const marker = L.marker([ocorrencia.lat, ocorrencia.lng], { icon: icone }).addTo(markersLayer.value);
     
-    // O clique no marcador agora emite um evento para o App.vue
     marker.on('click', () => {
       emit('marker-click', ocorrencia.id);
     });
@@ -73,3 +89,4 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
   width: 100vw;
 }
 </style>
+
