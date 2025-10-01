@@ -41,7 +41,7 @@ onMounted(() => {
   
   markersLayer.value = L.layerGroup().addTo(map.value);
 
-  // **** NOVA LÓGICA DE GEOLOCALIZAÇÃO INICIAL ****
+  // **** LÓGICA DE GEOLOCALIZAÇÃO INICIAL RESTAURADA ****
   if (navigator.geolocation) {
     // Pede a localização atual do dispositivo
     navigator.geolocation.getCurrentPosition(
@@ -71,8 +71,10 @@ watch(() => props.ocorrencias, (newOcorrencias) => {
 
   newOcorrencias.forEach(ocorrencia => {
     let icone = ocorrencia.status === 'resolvido' ? greenIcon : redIcon;
+
     const marker = L.marker([ocorrencia.lat, ocorrencia.lng], { icon: icone }).addTo(markersLayer.value);
     
+    // O clique no marcador agora emite um evento para o App.vue
     marker.on('click', () => {
       emit('marker-click', ocorrencia.id);
     });
