@@ -58,7 +58,7 @@
 
       <main class="main-content">
         <MapComponent :ocorrencias="listaDeDenuncias" :is-menu-open="isMenuOpen" @marker-click="showDenunciaDetails" />
-        
+
         <button @click="openAddModal" class="fab-add-button" v-if="isMobile" title="Adicionar Novo Foco"
           :disabled="isGettingLocation">
           <svg v-if="!isGettingLocation" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
@@ -88,13 +88,13 @@
   </div>
 
   <div v-else-if="currentPage === 'register'">
-    <RegisterView @show-page="showPage" />
+    <RegisterView @show-page="showPage" @go-to-login="showPage('login')" />
   </div>
 
   <div v-else-if="currentPage === 'forgot-password'">
-    <ForgotPasswordView @show-page="showPage" />
+    <ForgotPasswordView @show-page="showPage" @go-to-login="showPage('login')" />
   </div>
-  
+
   <div v-else-if="currentPage === 'reset-password'">
     <ResetPasswordView @show-page="showPage" />
   </div>

@@ -3,30 +3,31 @@
     <div class="auth-form">
       <h2>Entrar no App Dengue</h2>
       <p>Use suas credenciais para acessar o mapa.</p>
-      
+
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" v-model="email" required placeholder="seuemail@exemplo.com">
         </div>
-        
+
         <div class="form-group">
           <label for="password">Senha</label>
           <input type="password" id="password" v-model="password" required placeholder="********">
         </div>
-        
+
         <div v-if="errorMessage" class="error-message">
           {{ errorMessage }}
         </div>
-        
+
         <button type="submit" class="submit-button" :disabled="isLoading">
           {{ isLoading ? 'Entrando...' : 'Entrar' }}
         </button>
       </form>
-      
+
       <div class="switch-form">
-        <p><a href="#" @click.prevent="$emit('go-to-forgot-password')">Esqueci a senha</a></p>
-        <p>Não tem uma conta? <a href="#" @click.prevent="$emit('go-to-register')">Cadastre-se</a></p>
+        <p><a href="#" @click.prevent="$emit('show-page', 'forgot-password')">Esqueci a senha</a></p>
+        
+        <p>Não tem uma conta? <a href="#" @click.prevent="$emit('show-page', 'register')">Cadastre-se</a></p>
       </div>
     </div>
   </div>
@@ -36,7 +37,8 @@
 import { ref } from 'vue';
 import apiClient from '../services/apiClient';
 
-const emit = defineEmits(['login-success', 'go-to-register']);
+// CORREÇÃO ESSENCIAL: Adicionamos 'show-page' para padronizar a navegação
+const emit = defineEmits(['login-success', 'show-page']);
 
 const email = ref('');
 const password = ref('');
@@ -46,13 +48,13 @@ const errorMessage = ref(null);
 async function handleLogin() {
   isLoading.value = true;
   errorMessage.value = null;
-  
+
   try {
     const response = await apiClient.post('/login', {
       email: email.value,
       password: password.value,
     });
-    
+
     // Se o login for bem-sucedido, avisa o App.vue
     if (response.data.status) {
       emit('login-success', {
