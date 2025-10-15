@@ -10,19 +10,16 @@
         <p>Visualize e gira os utilizadores registados no sistema.</p>
       </header>
 
-      <!-- Estado de Carregamento -->
       <div v-if="loading" class="feedback-container">
         <div class="spinner"></div>
         <p>A carregar utilizadores...</p>
       </div>
 
-      <!-- Estado de Erro -->
       <div v-if="error" class="feedback-container error">
         <p>{{ error }}</p>
         <button @click="fetchUsers" class="retry-button">Tentar Novamente</button>
       </div>
 
-      <!-- Tabela de Utilizadores -->
       <div v-if="!loading && !error" class="users-table-wrapper">
         <table class="users-table">
           <thead>
@@ -32,11 +29,11 @@
               <th>Email</th>
               <th>Telefone</th>
               <th>Data de Criação</th>
-            </tr>
+              <th>Cargo</th> <th>Ações</th> </tr>
           </thead>
           <tbody>
             <tr v-if="users.length === 0">
-              <td colspan="5" class="no-users-message">Nenhum utilizador encontrado.</td>
+              <td colspan="7" class="no-users-message">Nenhum utilizador encontrado.</td>
             </tr>
             <tr v-for="user in users" :key="user.id">
               <td>{{ user.id }}</td>
@@ -44,6 +41,20 @@
               <td>{{ user.email }}</td>
               <td>{{ user.phone || 'N/A' }}</td>
               <td>{{ new Date(user.created_at).toLocaleDateString('pt-BR') }}</td>
+              
+              <td>
+                <select v-model="user.user_tipo" class="role-select">
+                  <option :value="1">Admin</option>
+                  <option :value="2">Funcionário</option>
+                  <option :value="3">Comum</option>
+                </select>
+              </td>
+
+              <td>
+                <button @click="updateUserRole(user)" class="save-button">
+                  Salvar
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -68,15 +79,41 @@ const fetchUsers = async () => {
   error.value = null;
   try {
     const response = await apiClient.get('/users');
-    // **** CORREÇÃO DO BUG ****
     // A API do Laravel para o 'index' geralmente retorna os dados dentro de um objeto de paginação.
-    // Acessamos 'response.data.users.data' para obter a lista de utilizadores.
     users.value = response.data.users.data || response.data.users || response.data;
+
+    // IMPORTANTE: Certifique-se de que sua API está retornando o campo 'user_tipo' para cada usuário.
+    // Se não estiver, o dropdown não funcionará corretamente.
+
   } catch (err) {
     error.value = 'Ocorreu um erro ao carregar os utilizadores. Por favor, tente novamente.';
     console.error("Erro ao buscar utilizadores:", err);
   } finally {
     loading.value = false;
+  }
+};
+
+// src/views/UsersView.vue -> dentro do <script setup>
+
+// NOVO: Função para atualizar o cargo do usuário (versão corrigida)
+const updateUserRole = async (user) => {
+  try {
+    // Agora o payload é muito mais simples!
+    const payload = {
+      user_tipo: user.user_tipo,
+    };
+
+    // Usamos a nova rota PATCH e enviamos apenas o cargo.
+    await apiClient.patch(`/users/${user.id}/role`, payload);
+
+    // Damos um feedback de sucesso
+    alert(`Cargo de ${user.name} atualizado com sucesso!`);
+
+  } catch (err) {
+    alert('Ocorreu um erro ao atualizar o cargo. Veja o console para detalhes.');
+    console.error("Erro ao atualizar o cargo:", err);
+    // Recarrega os usuários para reverter a mudança visual no dropdown em caso de erro
+    fetchUsers(); 
   }
 };
 
@@ -96,7 +133,7 @@ onMounted(fetchUsers);
 
 .users-content {
   width: 100%;
-  max-width: 960px; /* Tabela diminuída para um layout mais focado */
+  max-width: 1100px; /* Aumentei um pouco a largura para as novas colunas */
   padding: 40px;
   box-sizing: border-box;
 }
@@ -192,17 +229,10 @@ onMounted(fetchUsers);
 
 /* Alinhamento para colunas específicas */
 .users-table th:first-child,
-.users-table tbody td:first-child { /* CORRIGIDO: Seletor mais específico */
+.users-table tbody td:first-child { 
   text-align: center;
-  width: 1%; /* Faz a coluna do ID ser mais compacta */
+  width: 1%;
 }
-
-.users-table th:last-child,
-.users-table tbody td:last-child { /* CORRIGIDO: Seletor mais específico */
-  text-align: center;
-  white-space: nowrap; /* Impede que a data quebre a linha */
-}
-
 
 .users-table tbody tr:last-child td {
   border-bottom: none;
@@ -241,5 +271,29 @@ td{
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-</style>
 
+/* // NOVO: Estilos para o dropdown e botão na tabela */
+.role-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.save-button {
+  padding: 8px 16px;
+  border: none;
+  background-color: #007BFF;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.save-button:hover {
+  background-color: #0056b3;
+}
+</style>
