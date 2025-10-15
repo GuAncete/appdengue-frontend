@@ -20,7 +20,7 @@
             </a>
           </li>
 
-          <li v-if="user && user.id === 1">
+          <li v-if="user && user.user_tipo == 1">
             <a href="#" @click.prevent="showPage('users')">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,6 +30,16 @@
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               <span>Gerir Utilizadores</span>
+            </a>
+          </li>
+
+          <li v-if="user && user.user_tipo == 1">
+            <a href="#" @click.prevent="showPage('reports')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 17l2.121-2.121a5.5 5.5 0 0 1 7.778 0L14 17l-4 4-4-4z"/>
+                <path d="M11 7l2.121-2.121a5.5 5.5 0 0 1 7.778 0L23 7l-4 4-4-4z"/>
+              </svg>
+              <span>Relatórios</span>
             </a>
           </li>
 
@@ -59,7 +69,7 @@
       <main class="main-content">
         <MapComponent :ocorrencias="listaDeDenuncias" :is-menu-open="isMenuOpen" @marker-click="showDenunciaDetails" />
 
-        <button @click="openAddModal" class="fab-add-button" v-if="isMobile" title="Adicionar Novo Foco"
+        <button @click="openAddModal" class="fab-add-button" title="Adicionar Novo Foco"
           :disabled="isGettingLocation">
           <svg v-if="!isGettingLocation" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
             fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -74,7 +84,12 @@
         <AddOccurrenceModal v-if="newDenunciaLocation" :location="newDenunciaLocation" @save="saveDenuncia"
           @cancel="newDenunciaLocation = null" />
 
-        <DenunciaDetailModal v-if="selectedDenuncia" :denuncia="selectedDenuncia" @close="selectedDenuncia = null" />
+        <DenunciaDetailModal
+          v-if="selectedDenuncia"
+          :denuncia="selectedDenuncia"
+          :user="user"  @close="selectedDenuncia = null"
+          @denuncia-updated="fetchDenuncias"
+        />
       </main>
     </div>
   </div>
@@ -83,6 +98,9 @@
     <UsersView @back-to-map="showPage('map')" />
   </div>
 
+  <div v-else-if="currentPage === 'reports'">
+    <ReportsView @back-to-map="showPage('map')" />
+  </div>
   <div v-else-if="currentPage === 'login'">
     <LoginView @login-success="handleLoginSuccess" @show-page="showPage" />
   </div>
@@ -101,6 +119,7 @@
 </template>
 
 <script setup>
+import ReportsView from './views/ReportsView.vue';
 import { ref, onMounted } from 'vue';
 import MapComponent from './components/MapComponent.vue';
 import AddOccurrenceModal from './components/AddOccurrenceModal.vue';
@@ -149,17 +168,8 @@ async function fetchDenuncias() {
     const response = await apiClient.get('/denuncias');
 
     const denunciasMapeadas = response.data.denuncias.map(item => {
-      let fotoUrl = null;
-      if (item.fotos && item.fotos.length > 0 && item.fotos[0].url) {
-        // Usa uma expressão regular para extrair o URL real de dentro da string de Markdown
-        const match = item.fotos[0].url.match(/\((.*?)\)/);
-        if (match && match[1]) {
-          fotoUrl = match[1];
-        } else {
-          // Se não for o formato de Markdown, usa o URL como está (mais seguro)
-          fotoUrl = item.fotos[0].url;
-        }
-      }
+      // Pega a URL da foto diretamente, sem regex.
+      const fotoUrl = item.fotos && item.fotos.length > 0 ? item.fotos[0].url : null;
 
       return {
         id: item.IdDenuncia,
@@ -167,7 +177,8 @@ async function fetchDenuncias() {
         lng: parseFloat(item.Longitude),
         status: item.Status === 1 ? 'pendente' : (item.Status === 3 ? 'resolvido' : 'em_analise'),
         descricao: item.Descricao,
-        foto_url: fotoUrl
+        foto_url: fotoUrl, // Usa a URL limpa
+        data_fim: item.data_fim
       };
     });
 
